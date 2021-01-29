@@ -10,12 +10,12 @@ contract SharerV2 {
     using Address for address;
     using SafeMath for uint256;
     
-    
-    event contributorAdded(address _con, uint256 _shares, uint256 _total);
-    event contributorDeleted(address _con, uint256 _total);
+    event ContributorsSet(address indexed strategy, address[] contributors, uint256[] numOfShares);
+    event Distribute(address indexed strategy, address lpToken);
+
     struct Contributor {
+        address contributor;
         uint256 numOfShares;
-        address owner;
     }
     mapping(address => Contributor[]) public shares;
     address public strategist_ms;
@@ -34,22 +34,23 @@ contract SharerV2 {
        return shares[strategy];
     }
 
-
-    function setContributors(address strategy, uint256[] calldata  contributorsS, address[] calldata contributorA) public {
-        require(contributorA.length == contributorsS.length, "length not the same");
+    // Contributors for a strategy are set all at once, not on individual basis.
+    // Initialization of contributors list for any strategy can be done by anyone. Afterwards, only Strategist MS can call this
+    // If sum of total shares set < 1,000, any remainder of shares will go to strategist multisig
+    function setContributors(address strategy, address[] calldata _contributors, uint256[] calldata _numOfShares) public {
+        require(_contributors.length == _numOfShares.length, "length not the same");
 
         require(shares[strategy].length == 0 || msg.sender == strategist_ms, "Only Strat MS can overwrite");
 
         delete shares[strategy];
         uint256 totalShares = 0;
 
-        for(uint256 i = 0; i < contributorsS.length; i++ ){
-            totalShares = totalShares.add(contributorsS[i]);
-            
-            shares[strategy].push(Contributor(contributorsS[i], contributorA[i]));
+        for(uint256 i = 0; i < _contributors.length; i++ ){
+            totalShares = totalShares.add(_numOfShares[i]);
+            shares[strategy].push(Contributor(_contributors[i], _numOfShares[i]));
         }
         require(totalShares <= 1000, "share total more than 100%");
-
+        emit ContributorsSet(strategy, _contributors, _numOfShares);
     }
 
 
@@ -64,12 +65,12 @@ contract SharerV2 {
         }
             
         for(uint256 i = 0; i < contributorsT.length; i++ ){
-                address cont = contributorsT[i].owner;
+                address cont = contributorsT[i].contributor;
                 uint256 share = totalRewards.mul(contributorsT[i].numOfShares).div(1000);
                 reward.safeTransfer(cont, share);
                 remainingRewards -= share;
         }
         reward.safeTransfer(strategist_ms, remainingRewards);
-        
+        emit Distribute(strategy, lpToken);
     }
 }

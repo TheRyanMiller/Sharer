@@ -41,6 +41,21 @@ contract Sharer {
         return a - b;
     }
 
+    //Initialize or completely overrite existing list of contributors
+    function setContributors(address[] calldata _contributors, uint16[] calldata  contShares) public onlyOwner {
+        //revert if caller has mismtached sizes of arrays 
+        require(_contributors.length == contShares.length, "length not the same");
+
+        uint16 oldShares = 0;
+        contributors = _contributors;
+        for(uint256 i = 0; i < contShares.length; i++ ){
+            oldShares = tryadd(oldShares, contShares[i]);
+            require(oldShares <= 1000, "share total more than 100%");
+            shares[_contributors[i]] = Contributor(contShares[i], true);
+        }
+        totalShare = oldShares;
+    }
+
     //Change shares of a contributor or sets
     function addContributor(address _con, uint16 _share) public onlyOwner {
         require (_share <= 1000, "share more than 100%");
@@ -60,20 +75,6 @@ contract Sharer {
         //revert if we pushed the total over 1000...
         require (totalShare <= 1000, "share total more than 100%");
         emit contributorAdded(_con, _share, totalShare);
-    }
-
-    function setContributors(uint16[] calldata  contributorsEx, address[] calldata contributorA) public onlyOwner {
-        require(contributorA.length == contributorsEx.length, "length not the same");
-
-        uint16 oldShares = 0;
-        contributors = contributorA;
-         for(uint256 i = 0; i < contributorsEx.length; i++ ){
-             oldShares = tryadd(oldShares, contributorsEx[i]);
-             require(oldShares <= 1000, "share total more than 100%");
-             shares[contributorA[i]] = Contributor(contributorsEx[i], true);
-         }
-         totalShare = oldShares;
-
     }
 
     function removeContributor(address _con) public onlyOwner {

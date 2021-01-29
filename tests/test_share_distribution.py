@@ -16,29 +16,29 @@ def test_share_distro(chain, interface, accounts, Contract, SharerV2):
     
     sharer = samdev.deploy(SharerV2)
 
-    contributorsEx = [250, 250, 250]
+    numOfShares = [250, 250, 250]
 
-    contributorA = [mat, ryan, sms]
+    contributors = [mat, ryan, sms]
     yshare = interface.ERC20('0x19d3364a399d251e894ac732651be8b0e4e85001')
     strategy = '0x4D7d4485fD600c61d840ccbeC328BfD76A050F87'
 
-    sharer.setContributors(strategy, contributorsEx,contributorA, {'from': rando} )
+    sharer.setContributors(strategy, contributors, numOfShares, {'from': rando} )
 
     ##overwrite
     with brownie.reverts("Only Strat MS can overwrite"):
-        sharer.setContributors(strategy, contributorsEx,contributorA, {'from': rando} )
+        sharer.setContributors(strategy, contributors, numOfShares, {'from': rando} )
 
-    sharer.setContributors(strategy, contributorsEx,contributorA, {'from': samdev} )
+    sharer.setContributors(strategy, contributors, numOfShares, {'from': samdev} )
 
     ##too many
-    contributorsEx = [100, 100, 100, 100]
+    numOfShares = [100, 100, 100, 100]
     with brownie.reverts("length not the same"):
-        sharer.setContributors(strategy, contributorsEx,contributorA, {'from': samdev} )
+        sharer.setContributors(strategy, contributors, numOfShares, {'from': samdev} )
 
     ##over 100%
-    contributorsEx = [500, 500, 500]
+    numOfShares = [500, 500, 500]
     with brownie.reverts("share total more than 100%"):
-        sharer.setContributors(strategy, contributorsEx,contributorA, {'from': samdev} )
+        sharer.setContributors(strategy, contributors, numOfShares, {'from': samdev} )
 
     print(sharer.viewContributors(yshare))
     print(sharer.viewContributors(dmi))
@@ -49,8 +49,13 @@ def test_share_distro(chain, interface, accounts, Contract, SharerV2):
     assert yshare.balanceOf(samdev) == 0
     print("Sharer bal: ", yshare.balanceOf(sharer)/1e18)
 
+    
     sharer.distribute(yshare,strategy, {'from': samdev})
+    print("==== DISTRIBUTION CALLED HERE ====")
+
     print("Sam bal after dis: ", yshare.balanceOf(samdev)/1e18)
-    print("Mat bal: ", yshare.balanceOf(mat)/1e18)
+    print("Mat bal after dis: ", yshare.balanceOf(mat)/1e18)
+    print("Sharer bal after dis: ", yshare.balanceOf(sharer)/1e18)
     assert yshare.balanceOf(mat) == yshare.balanceOf(ryan)
     assert yshare.balanceOf(samdev) >= yshare.balanceOf(ryan)
+    assert yshare.balanceOf(sharer) == 0
